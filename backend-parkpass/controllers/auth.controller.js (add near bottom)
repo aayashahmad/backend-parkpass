@@ -1,0 +1,48 @@
+// ... existing code ...
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
+
+// @desc  Forgot password
+// @route POST /api/auth/forgotpassword
+// @access Public
+exports.forgotPassword = async (req, res) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return res.status(404).json({ success: false, message: 'No user with that email' });
+  }
+  const resetToken = user.getResetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
+  const message = `You requested a password reset. Make a PUT request to: \n\n${resetUrl}`;
+
+  try {
+    await sendEmail({ email: user.email, subject: 'Password reset', message });
+    res.status(200).json({ success: true, data: 'Email sent' });
+  } catch (err) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+    res.status(500).json({ success: false, message: 'Email could not be sent' });
+  }
+};
+
+// @desc  Reset password
+// @route PUT /api/auth/resetpassword/:resettoken
+// @access Public
+exports.resetPassword = async (req, res) => {
+  const resetPasswordToken = crypto.createHash('sha256').update(req.params.resettoken).digest('hex');
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() }
+  });
+  if (!user) {
+    return res.status(400).json({ success: false, message: 'Invalid token' });
+  }
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+  await user.save();
+  const token = generateToken(user._id);
+  res.status(200).json({ success: true, token });
+};
