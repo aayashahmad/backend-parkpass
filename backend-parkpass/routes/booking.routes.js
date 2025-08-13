@@ -21,13 +21,15 @@ router.post('/', createBooking);
 router.put('/:id/payment', updatePaymentStatus);
 router.get('/:id/ticket', generateTicket);
 router.put('/:id/print', markTicketAsPrinted);
-router.get('/', getBookings);
 
 // Protected routes
 router.use(protect);
 
 // Admin only routes
 router.use(authorize('super-admin', 'park-admin', 'ticket-checker'));
+
+// Get all bookings (requires authentication and admin role)
+router.get('/', getBookings);
 
 router.get('/ticket/:ticketNo', getTicketByNumber);
 router.put('/ticket/:ticketNo/use', markTicketAsUsed);
