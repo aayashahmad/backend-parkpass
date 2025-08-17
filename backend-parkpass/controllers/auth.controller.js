@@ -5,6 +5,8 @@ const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 const { createOTPEmail } = require('../templates/otpEmail');
 
+
+
 // --- helpers ---
 const signToken = (user) =>
   jwt.sign({ sub: user._id, role: user.role }, process.env.JWT_SECRET, {
